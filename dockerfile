@@ -1,20 +1,25 @@
-# Use slim Python base for lightweight image
 FROM python:3.10-slim
 
-# Set working directory
 WORKDIR /app
 
-# Copy requirements first for better caching
+# Install system deps
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python deps
 COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    --extra-index-url https://download.pytorch.org/whl/cpu
 
-# Install dependencies (no cache to keep image small)
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the app code
+# Copy application code
 COPY app.py .
 
-# Expose port
-EXPOSE 8000
+# Copy the local Hugging Face model into the image
+COPY codelander ./codelander
 
-# Run the server
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8345"]
+EXPOSE 8345
+
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8345"]
